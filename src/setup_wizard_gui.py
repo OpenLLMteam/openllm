@@ -474,6 +474,14 @@ class SetupWizardGUI(ctk.CTk):
         self.generate_prompt_btn.configure(state="disabled")
         self.update()
         
+        # Run generation in background thread to avoid freezing UI
+        import threading
+        thread = threading.Thread(target=self._generate_prompt_async, args=(provider, api_key, model, user_request))
+        thread.daemon = True
+        thread.start()
+    
+    def _generate_prompt_async(self, provider, api_key, model, user_request):
+        """Generate prompt in background thread."""
         try:
             # Import the provider
             from src.llm.factory import LLMProviderFactory
@@ -490,7 +498,7 @@ The prompt should be professional and suitable for a Discord bot.
 
 Respond with ONLY the system prompt text, nothing else."""
             
-            # Run async generation - handle existing event loop
+            # Run async generation
             import asyncio
             from src.llm.base import Message
             
@@ -503,33 +511,33 @@ Respond with ONLY the system prompt text, nothing else."""
                 )
                 return response.content.strip()
             
-            # Try to get existing loop, or create new one
-            try:
-                loop = asyncio.get_running_loop()
-                # If we're already in a loop, we need to run in executor
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    generated_prompt = pool.submit(
-                        lambda: asyncio.run(generate())
-                    ).result()
-            except RuntimeError:
-                # No running loop, safe to create new one
-                generated_prompt = asyncio.run(generate())
+            # Create new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            generated_prompt = loop.run_until_complete(generate())
+            loop.close()
             
-            # Update the text area
-            self.system_prompt_text.delete("1.0", "end")
-            self.system_prompt_text.insert("1.0", generated_prompt)
-            self.setup_data['system_prompt'].set(generated_prompt)
-            
-            self.prompt_status_label.configure(text="✓ Prompt generated successfully!", text_color="green")
+            # Update UI in main thread
+            self.after(0, self._update_prompt_result, generated_prompt, None)
             
         except Exception as e:
             logger.error(f"Failed to generate prompt: {e}", exc_info=True)
-            messagebox.showerror("Generation Failed", f"Could not generate prompt: {str(e)}")
+            # Update UI with error in main thread
+            self.after(0, self._update_prompt_result, None, str(e))
+    
+    def _update_prompt_result(self, prompt, error):
+        """Update UI with prompt generation result."""
+        if error:
+            messagebox.showerror("Generation Failed", f"Could not generate prompt: {error}")
             self.prompt_status_label.configure(text="✗ Generation failed", text_color="red")
+        else:
+            # Update the text area
+            self.system_prompt_text.delete("1.0", "end")
+            self.system_prompt_text.insert("1.0", prompt)
+            self.setup_data['system_prompt'].set(prompt)
+            self.prompt_status_label.configure(text="✓ Prompt generated successfully!", text_color="green")
         
-        finally:
-            self.generate_prompt_btn.configure(state="normal")
+        self.generate_prompt_btn.configure(state="normal")
     
     def show_tools_step(self):
         """Step 4: Tools Configuration."""
