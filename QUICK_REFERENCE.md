@@ -1,4 +1,4 @@
-# Discord LLM Bot - Quick Reference
+# OpenLLM - Quick Reference
 
 ## Common Commands
 

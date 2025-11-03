@@ -1,6 +1,6 @@
-# 🤖 Discord LLM Bot
+# 🤖 OpenLLM
 
-A powerful Discord bot powered by Large Language Models with a modern GUI dashboard and extensive customization options.
+OpenLLM — a powerful Discord assistant platform powered by Large Language Models with a modern GUI dashboard and extensive customization options.
 
 ## ✨ Features
 
@@ -26,7 +26,7 @@ A powerful Discord bot powered by Large Language Models with a modern GUI dashbo
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd discord-llm-bot
+   cd openllm
    ```
 
 2. **Create a virtual environment**

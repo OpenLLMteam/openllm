@@ -1,6 +1,6 @@
 # Plugin Development Guide
 
-This guide will help you create custom plugins to extend the Discord LLM Bot's functionality.
+This guide will help you create custom plugins to extend OpenLLM's functionality.
 
 ## Plugin Structure
 

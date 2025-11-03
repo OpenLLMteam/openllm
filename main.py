@@ -1,5 +1,5 @@
 """
-Discord LLM Bot - Main Entry Point
+OpenLLM - Main Entry Point
 """
 import asyncio
 import sys
@@ -63,7 +63,7 @@ def reset_configuration():
 
 async def main():
     """Main entry point for the bot."""
-    parser = argparse.ArgumentParser(description="Discord LLM Bot")
+    parser = argparse.ArgumentParser(description="OpenLLM")
     parser.add_argument(
         "--setup",
         action="store_true",
@@ -111,7 +111,7 @@ async def main():
             enable_dashboard=not args.no_dashboard
         )
         
-        logger.info("Starting Discord LLM Bot...")
+        logger.info("Starting OpenLLM...")
         await bot.start()
         
     except KeyboardInterrupt:

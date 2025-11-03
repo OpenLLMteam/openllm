@@ -1,6 +1,6 @@
 # Setup Guide
 
-This guide will walk you through setting up the Discord LLM Bot from scratch.
+This guide will walk you through setting up OpenLLM from scratch.
 
 ## Prerequisites
 
@@ -101,10 +101,10 @@ Choose at least one provider:
 ```bash
 # Clone the repository (if using git)
 git clone <repository-url>
-cd discord-llm-bot
+cd openllm
 
 # OR download and extract the ZIP file, then navigate to the folder
-cd path/to/discord-llm-bot
+cd path/to/openllm
 ```
 
 ## Step 5: Create Virtual Environment
@@ -176,7 +176,7 @@ python main.py
 
 You should see:
 ```
-[INFO] Discord LLM Bot initialized
+[INFO] OpenLLM initialized
 [INFO] Bot logged in as YourBotName#1234
 ```
 
@@ -346,4 +346,4 @@ python main.py
 - Create your own custom tools
 - Configure per-server settings
 
-Enjoy your Discord LLM Bot! 🤖✨
+Enjoy OpenLLM! 🤖✨

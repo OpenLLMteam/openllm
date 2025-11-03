@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers development workflows, testing, and debugging for the Discord LLM Bot.
+This guide covers development workflows, testing, and debugging for OpenLLM.
 
 ## 🚀 Getting Started
 
@@ -9,7 +9,7 @@ This guide covers development workflows, testing, and debugging for the Discord 
 1. **Clone and setup virtual environment**
    ```bash
    git clone <repository>
-   cd discord-llm-bot
+   cd openllm
    python -m venv venv
    
    # Windows

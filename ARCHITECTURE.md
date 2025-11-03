@@ -1,4 +1,4 @@
-# Discord LLM Bot - Architecture
+# OpenLLM - Architecture
 
 ## System Architecture
 

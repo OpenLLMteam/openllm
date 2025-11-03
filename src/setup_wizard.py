@@ -36,7 +36,7 @@ class SetupWizard:
     async def run(self):
         """Run the setup wizard."""
         console.print(Panel.fit(
-            "[bold cyan]Discord LLM Bot Setup Wizard[/bold cyan]\n"
+            "[bold cyan]OpenLLM Setup Wizard[/bold cyan]\n"
             "Welcome! Let's configure your bot.",
             border_style="cyan"
         ))

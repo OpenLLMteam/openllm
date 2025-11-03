@@ -1,6 +1,6 @@
 # Pre-Launch Checklist
 
-Use this checklist before deploying your Discord LLM Bot.
+Use this checklist before deploying OpenLLM.
 
 ## Prerequisites
 
@@ -194,4 +194,4 @@ After 1 week:
 **Deployed By**: _______________  
 **Version**: 1.0.0  
 
-Good luck with your Discord LLM Bot! 🎉
+Good luck with OpenLLM! 🎉

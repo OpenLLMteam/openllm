@@ -1,5 +1,5 @@
 """
-Quick installation check for Discord LLM Bot.
+Quick installation check for OpenLLM.
 Run this before starting the bot to verify all dependencies are installed.
 """
 import sys
@@ -7,7 +7,7 @@ import sys
 def check_dependencies():
     """Check if all required dependencies are installed."""
     print("\n" + "="*60)
-    print("Discord LLM Bot - Dependency Check")
+    print("OpenLLM - Dependency Check")
     print("="*60 + "\n")
     
     required = {

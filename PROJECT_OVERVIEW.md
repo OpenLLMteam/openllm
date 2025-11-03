@@ -1,4 +1,4 @@
-# Discord LLM Bot - Project Overview
+# OpenLLM - Project Overview
 
 ## 🎯 Project Status: **Complete & Ready to Use**
 
@@ -7,7 +7,7 @@ This is a fully-functional Discord bot powered by Large Language Models with a m
 ## 📁 Project Structure
 
 ```
-discord-llm-bot/
+openllm/
 ├── main.py                     # Entry point
 ├── config.yaml                 # Main configuration
 ├── requirements.txt            # Python dependencies

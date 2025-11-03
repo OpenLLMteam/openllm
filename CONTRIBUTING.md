@@ -1,4 +1,4 @@
-# Contributing to Discord LLM Bot
+# Contributing to OpenLLM
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
 
@@ -17,9 +17,9 @@ Thank you for your interest in contributing! This document provides guidelines f
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/yourusername/discord-llm-bot.git
-   cd discord-llm-bot
-   ```
+   git clone https://github.com/yourusername/openllm.git
+   cd openllm
+```
 
 3. Create a virtual environment and install dependencies:
    ```bash

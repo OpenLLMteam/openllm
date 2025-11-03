@@ -20,12 +20,12 @@ ctk.set_default_color_theme("blue")
 
 
 class SetupWizardGUI(ctk.CTk):
-    """GUI Setup Wizard for Discord LLM Bot."""
+    """GUI Setup Wizard for OpenLLM."""
     
     def __init__(self):
         super().__init__()
         
-        self.title("Discord LLM Bot - Setup Wizard")
+        self.title("OpenLLM - Setup Wizard")
         self.geometry("900x940")
         self.minsize(850, 850)  # Set minimum size to prevent cutoff
         
@@ -78,8 +78,8 @@ class SetupWizardGUI(ctk.CTk):
         
         self.title_label = ctk.CTkLabel(
             self.header,
-            text="🤖 Discord LLM Bot Setup",
-            font=ctk.CTkFont(size=24, weight="bold")
+            text="🤖 OpenLLM Setup",
+            font=ctk.CTkFont(size=20, weight="bold")
         )
         self.title_label.pack(pady=20)
         
