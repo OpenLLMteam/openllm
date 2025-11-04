@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.bot import DiscordLLMBot
 from src.utils.logger import setup_logger
 from src.config.manager import ConfigManager
+from src.setup_web import run_web_setup
 
 logger = setup_logger(__name__)
 
@@ -67,7 +68,7 @@ async def main():
     parser.add_argument(
         "--setup",
         action="store_true",
-        help="Run the setup wizard"
+        help="Run the browser-based setup wizard"
     )
     parser.add_argument(
         "--reset",
@@ -98,10 +99,8 @@ async def main():
     # Run setup wizard if requested or if first launch
     config_manager = ConfigManager()
     if args.setup or not config_manager.is_configured():
-        logger.info("Starting GUI setup wizard...")
-        # Import here to avoid issues if tkinter not available
-        from src.setup_wizard_gui import run_gui_setup
-        run_gui_setup()
+        logger.info("Starting web setup wizard...")
+        run_web_setup(auto_start_dashboard=False, allow_launch=False)
         logger.info("Setup complete! Starting bot...")
     
     # Initialize and start the bot

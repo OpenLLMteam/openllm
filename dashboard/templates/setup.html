@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenLLM Setup Wizard</title>
+    <style>
+        :root {
+            --bg:#0b1120;
+            --panel:#111c2e;
+            --panel-border:#1f2a3e;
+            --panel-hover:#16213e;
+            --text:#f8fafc;
+            --muted:#94a3b8;
+            --accent:#7c3aed;
+            --accent-soft:#6366f1;
+            --accent-strong:#4338ca;
+            --success:#10b981;
+            --danger:#ef4444;
+            --warning:#f59e0b;
+        }
+        * {
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+        body {
+            font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background:var(--bg);
+            color:var(--text);
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            padding:48px 16px 64px;
+        }
+        .wizard-shell {
+            width:min(1080px, 100%);
+            display:flex;
+            flex-direction:column;
+            gap:28px;
+        }
+        .card {
+            background:var(--panel);
+            border:1px solid var(--panel-border);
+            border-radius:20px;
+            padding:28px;
+            box-shadow:0 30px 60px rgba(11,17,32,0.55);
+        }
+        .header-card {
+            display:flex;
+            flex-direction:column;
+            gap:16px;
+        }
+        .header-card h1 {
+            font-size:32px;
+            font-weight:700;
+        }
+        .header-card p {
+            color:var(--muted);
+            max-width:720px;
+            line-height:1.6;
+        }
+        .stepper {
+            display:flex;
+            gap:16px;
+            flex-wrap:wrap;
+        }
+        .step-chip {
+            display:flex;
+            align-items:center;
+            gap:12px;
+            padding:10px 18px;
+            border-radius:999px;
+            border:1px solid rgba(99,102,241,0.18);
+            background:rgba(148,163,184,0.14);
+            color:var(--muted);
+            font-weight:600;
+            transition:all 0.2s ease;
+        }
+        .step-chip.active {
+            background:linear-gradient(135deg, var(--accent-soft), var(--accent));
+            border-color:transparent;
+            color:#fff;
+            box-shadow:0 18px 32px rgba(99,102,241,0.28);
+        }
+        .step-chip.completed {
+            background:rgba(16,185,129,0.18);
+            border-color:rgba(16,185,129,0.35);
+            color:#bbf7d0;
+        }
+        .step-body {
+            min-height:420px;
+            display:flex;
+            flex-direction:column;
+            gap:24px;
+        }
+        .section-title {
+            font-size:22px;
+            font-weight:700;
+        }
+        .section-subtitle {
+            color:var(--muted);
+            line-height:1.5;
+        }
+        .input-grid {
+            display:grid;
+            gap:18px;
+        }
+        .input-grid.two {
+            grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+        }
+        label.field {
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+            font-weight:600;
+        }
+        label.field span.caption {
+            color:var(--muted);
+            font-weight:500;
+            font-size:13px;
+        }
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        input[type="url"],
+        textarea,
+        select {
+            background:#0f172a;
+            border:1px solid rgba(148,163,184,0.16);
+            border-radius:12px;
+            padding:12px 16px;
+            color:var(--text);
+            font-size:15px;
+            transition:border 0.2s ease, box-shadow 0.2s ease;
+        }
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline:none;
+            border-color:var(--accent-soft);
+            box-shadow:0 0 0 3px rgba(99,102,241,0.18);
+        }
+        textarea {
+            min-height:180px;
+            resize:vertical;
+        }
+        .radio-card-group {
+            display:grid;
+            grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+            gap:16px;
+        }
+        .radio-card {
+            border:1px solid rgba(148,163,184,0.18);
+            border-radius:16px;
+            padding:18px;
+            background:rgba(15,23,42,0.65);
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+            cursor:pointer;
+            transition:all 0.2s ease;
+        }
+        .radio-card.active {
+            border-color:transparent;
+            background:linear-gradient(135deg, var(--accent-soft), var(--accent));
+            box-shadow:0 24px 36px rgba(99,102,241,0.35);
+        }
+        .radio-card input {
+            display:none;
+        }
+        .pill {
+            align-self:flex-start;
+            padding:6px 12px;
+            border-radius:999px;
+            background:rgba(148,163,184,0.16);
+            color:var(--muted);
+            font-size:12px;
+            font-weight:600;
+        }
+        .radio-card.active .pill {
+            background:rgba(255,255,255,0.25);
+            color:#fff;
+        }
+        .toggle-row {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:16px;
+            padding:16px 18px;
+            border-radius:16px;
+            background:rgba(15,23,42,0.65);
+            border:1px solid rgba(148,163,184,0.14);
+        }
+        .toggle-row .copy {
+            display:flex;
+            flex-direction:column;
+            gap:6px;
+        }
+        .toggle-row .copy span.title {
+            font-weight:600;
+        }
+        .toggle-row .copy span.meta {
+            color:var(--muted);
+            font-size:13px;
+        }
+        .switch {
+            position:relative;
+            width:50px;
+            height:28px;
+        }
+        .switch input {
+            opacity:0;
+            width:0;
+            height:0;
+        }
+        .slider {
+            position:absolute;
+            cursor:pointer;
+            inset:0;
+            background:rgba(148,163,184,0.25);
+            transition:.2s;
+            border-radius:999px;
+        }
+        .slider:before {
+            position:absolute;
+            content:"";
+            height:22px;
+            width:22px;
+            left:4px;
+            bottom:3px;
+            background:white;
+            border-radius:999px;
+            transition:.2s;
+        }
+        .switch input:checked + .slider {
+            background:linear-gradient(135deg, var(--accent-soft), var(--accent));
+        }
+        .switch input:checked + .slider:before {
+            transform:translateX(22px);
+        }
+        .ollama-guide {
+            border:1px solid rgba(99,102,241,0.25);
+            border-radius:16px;
+            padding:18px;
+            background:rgba(99,102,241,0.12);
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+            color:#c7d2fe;
+        }
+        .ollama-guide code {
+            background:rgba(15,23,42,0.6);
+            border-radius:10px;
+            padding:10px 12px;
+            font-family:'JetBrains Mono','Fira Code',monospace;
+            display:block;
+        }
+        .summary-grid {
+            display:grid;
+            gap:14px;
+        }
+        .summary-item {
+            display:flex;
+            justify-content:space-between;
+            gap:24px;
+            padding:14px 18px;
+            background:rgba(15,23,42,0.65);
+            border:1px solid rgba(148,163,184,0.12);
+            border-radius:14px;
+        }
+        .summary-item span.label {
+            font-weight:600;
+        }
+        .summary-item span.value {
+            color:#cbd5f5;
+        }
+        .nav-bar {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:16px;
+        }
+        .btn {
+            border:none;
+            border-radius:999px;
+            padding:12px 24px;
+            font-size:15px;
+            font-weight:600;
+            cursor:pointer;
+            transition:transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+        .btn:disabled {
+            cursor:not-allowed;
+            opacity:0.5;
+        }
+        .btn-secondary {
+            background:rgba(148,163,184,0.15);
+            color:#cbd5f5;
+            border:1px solid rgba(148,163,184,0.3);
+        }
+        .btn-secondary:hover:not(:disabled) {
+            transform:translateY(-2px);
+            background:rgba(148,163,184,0.25);
+        }
+        .btn-primary {
+            background:linear-gradient(135deg, var(--accent-soft), var(--accent));
+            color:#fff;
+            box-shadow:0 20px 35px rgba(99,102,241,0.28);
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform:translateY(-2px);
+            box-shadow:0 28px 45px rgba(99,102,241,0.35);
+        }
+        .btn-success {
+            background:linear-gradient(135deg, var(--success), #0d9469);
+            color:#fff;
+            box-shadow:0 20px 35px rgba(16,185,129,0.28);
+        }
+        .btn-success:hover:not(:disabled) {
+            transform:translateY(-2px);
+            box-shadow:0 26px 42px rgba(16,185,129,0.35);
+        }
+        .alert {
+            border-radius:16px;
+            padding:16px 18px;
+            border:1px solid rgba(148,163,184,0.2);
+            background:rgba(148,163,184,0.12);
+            color:#e2e8f0;
+            font-size:14px;
+            line-height:1.5;
+        }
+        .alert.warning {
+            border-color:rgba(245,158,11,0.45);
+            background:rgba(245,158,11,0.12);
+            color:#fcd34d;
+        }
+        .alert.success {
+            border-color:rgba(16,185,129,0.35);
+            background:rgba(16,185,129,0.12);
+            color:#bbf7d0;
+        }
+        .toast {
+            position:fixed;
+            top:24px;
+            right:24px;
+            padding:16px 22px;
+            border-radius:16px;
+            border:1px solid var(--panel-border);
+            background:var(--panel);
+            color:var(--text);
+            box-shadow:0 24px 50px rgba(11,17,32,0.6);
+            display:none;
+            z-index:1000;
+        }
+        .toast.show {
+            display:block;
+        }
+        .toast.error { border-left:4px solid var(--danger); }
+        .toast.success { border-left:4px solid var(--success); }
+        .finish-actions {
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+            margin-top:24px;
+        }
+        @media (max-width:768px) {
+            body { padding:32px 12px 48px; }
+            .wizard-shell { gap:22px; }
+            .card { padding:22px; }
+            .nav-bar { flex-direction:column; align-items:stretch; }
+            .finish-actions { flex-direction:column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-shell">
+        <div class="card header-card">
+            <h1>OpenLLM Setup Wizard</h1>
+            <p>Follow the guided steps to connect your Discord bot, choose an AI provider, and configure features. The wizard saves your configuration to <code>.env</code> and <code>config.yaml</code> so you can start the dashboard with confidence.</p>
+            <div class="stepper" id="stepper"></div>
+        </div>
+
+        <div class="card">
+            <div class="step-body" id="step-body"></div>
+            <div class="nav-bar">
+                <button class="btn btn-secondary" id="back-btn">Back</button>
+                <button class="btn btn-primary" id="next-btn">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const state = {
+            step: 0,
+            totalSteps: 6,
+            providers: [],
+            models: {},
+            ollamaGuide: {},
+            allowLaunch: false,
+            autoStart: false,
+            tokenPreset: false,
+            apiKeysSet: {},
+            submitting: false,
+            form: {
+                discord_token: '',
+                prefix: '!',
+                provider: 'gemini',
+                api_key: '',
+                model: 'gemini-2.5-flash',
+                temperature: 0.7,
+                max_tokens: '2048',
+                system_prompt: '',
+                enforce_char_limit: false,
+                search_enabled: true,
+                search_provider: 'duckduckgo',
+                searxng_url: 'http://localhost:8888',
+                dashboard_enabled: true,
+                dashboard_port: 5000,
+                screening_enabled: false,
+                screening_model: 'gemini-2.5-flash',
+                screening_action: 'block',
+                screening_policy: '',
+                screening_channel_id: ''
+            }
+        };
+
+        const stepLabels = [
+            'Discord Bot',
+            'AI Provider',
+            'System Prompt',
+            'Tools & Limits',
+            'Content Screening',
+            'Review'
+        ];
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast show ${type}`;
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3200);
+        }
+
+        function updateStepper() {
+            const stepper = document.getElementById('stepper');
+            stepper.innerHTML = stepLabels.map((label, idx) => {
+                const classes = ['step-chip'];
+                if (idx === state.step) classes.push('active');
+                else if (idx < state.step) classes.push('completed');
+                return `<div class="${classes.join(' ')}"><span>${idx + 1}</span><span>${label}</span></div>`;
+            }).join('');
+        }
+
+        function bindToggle(id, key) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.checked = Boolean(state.form[key]);
+            el.addEventListener('change', () => {
+                state.form[key] = el.checked;
+                if (key === 'search_enabled') renderStep();
+                if (key === 'screening_enabled') renderStep();
+            });
+        }
+
+        function bindInput(id, key, parser = (v) => v) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const value = state.form[key];
+            if (value !== undefined && value !== null) {
+                el.value = value;
+            }
+            el.addEventListener('input', () => {
+                state.form[key] = parser(el.value);
+            });
+        }
+
+        function renderDiscordStep(container) {
+            container.innerHTML = `
+                <div>
+                    <h2 class="section-title">Discord configuration</h2>
+                    <p class="section-subtitle">Connect your Discord bot token and choose a command prefix. The token is stored securely inside <code>.env</code>.</p>
+                </div>
+                <div class="input-grid">
+                    <label class="field" for="discord-token">
+                        Discord bot token
+                        <span class="caption">Paste the token from the Discord Developer Portal. ${state.tokenPreset ? 'Existing token detected &mdash; enter a new one to replace it.' : ''}</span>
+                        <input id="discord-token" type="password" placeholder="Paste your Discord bot token" autocomplete="off">
+                    </label>
+                    <label class="field" for="discord-prefix">
+                        Command prefix
+                        <span class="caption">Users will run commands like <code>${state.form.prefix || '!'}help</code>.</span>
+                        <input id="discord-prefix" type="text" maxlength="5" placeholder="!">
+                    </label>
+                </div>
+                <div class="alert warning">
+                    Need help? Enable Message Content Intent and Server Members Intent for your bot. Invite it with the <code>bot</code> and <code>applications.commands</code> scopes.
+                </div>
+            `;
+            bindInput('discord-token', 'discord_token');
+            bindInput('discord-prefix', 'prefix');
+        }
+
+        function renderProviderStep(container) {
+            const providerCards = state.providers.map((provider) => {
+                const active = provider.id === state.form.provider;
+                const classes = ['radio-card'];
+                if (active) classes.push('active');
+                const badge = provider.recommended ? '<span class="pill">Recommended</span>' : '';
+                return `
+                    <label class="${classes.join(' ')}" data-provider="${provider.id}">
+                        <input type="radio" name="provider" value="${provider.id}" ${active ? 'checked' : ''}>
+                        ${badge}
+                        <div>
+                            <div style="font-weight:700;font-size:16px;">${provider.name}</div>
+                            <div style="color:var(--muted);font-size:13px;">${provider.tagline}</div>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+
+            const apiKeyNote = (() => {
+                const provider = state.form.provider;
+                if (provider === 'ollama') return '';
+                const existing = state.apiKeysSet[provider];
+                return existing ? '<span class="caption">Existing key detected &mdash; leave blank to keep it.</span>' : '<span class="caption">Grab your API key from the provider dashboard.</span>';
+            })();
+
+            const models = state.models[state.form.provider] || [];
+            const datalist = models.map((m) => `<option value="${m}"></option>`).join('');
+
+            container.innerHTML = `
+                <div>
+                    <h2 class="section-title">AI provider</h2>
+                    <p class="section-subtitle">Choose where the assistant should run. You can change providers later from the dashboard.</p>
+                </div>
+                <div class="radio-card-group" id="provider-group">${providerCards}</div>
+                <div class="input-grid">
+                    <label class="field" for="model-input">
+                        Model
+                        <span class="caption">Select a suggested model or enter a custom one.</span>
+                        <input id="model-input" list="model-options" type="text" placeholder="Model name" autocomplete="off">
+                        <datalist id="model-options">${datalist}</datalist>
+                    </label>
+                    <label class="field" for="temperature-input">
+                        Temperature
+                        <span class="caption">Higher values produce more creative responses. Recommended: 0.7</span>
+                        <input id="temperature-input" type="number" step="0.1" min="0" max="2">
+                    </label>
+                    <label class="field" for="max-tokens-input">
+                        Max tokens
+                        <span class="caption">Enter a number or <code>auto</code> to let the provider decide.</span>
+                        <input id="max-tokens-input" type="text" placeholder="2048">
+                    </label>
+                </div>
+                <div id="api-key-wrapper" class="input-grid" style="margin-top:8px;${state.form.provider === 'ollama' ? 'display:none;' : ''}">
+                    <label class="field" for="api-key-input">
+                        API key
+                        ${apiKeyNote}
+                        <input id="api-key-input" type="password" placeholder="Enter your API key" autocomplete="off">
+                    </label>
+                </div>
+                ${state.form.provider === 'ollama' ? renderOllamaGuide() : ''}
+            `;
+
+            document.querySelectorAll('#provider-group .radio-card').forEach((card) => {
+                card.addEventListener('click', () => {
+                    const value = card.getAttribute('data-provider');
+                    state.form.provider = value;
+                    if (value === 'ollama') state.form.api_key = '';
+                    const providerModels = state.models[value] || [];
+                    if (providerModels.length && providerModels[0]) {
+                        state.form.model = providerModels[0];
+                        if (providerModels[0].toLowerCase().includes('type custom')) {
+                            state.form.model = '';
+                        }
+                    }
+                    renderStep();
+                });
+            });
+
+            bindInput('model-input', 'model');
+            bindInput('temperature-input', 'temperature', (v) => parseFloat(v) || 0);
+            bindInput('max-tokens-input', 'max_tokens');
+            bindInput('api-key-input', 'api_key');
+        }
+
+        function renderOllamaGuide() {
+            const g = state.ollamaGuide;
+            return `
+                <div class="ollama-guide">
+                    <div style="font-weight:700;">Ollama quick start</div>
+                    <div>Ollama lets you run models locally for free. Install and start the daemon, then pull a model.</div>
+                    <div><strong>Linux install:</strong><code>${g.linux_command}</code></div>
+                    <div><strong>Windows & Mac:</strong> Download the installer at <a href="${g.windows_download}" target="_blank" style="color:#e0e7ff;">ollama.ai/download</a>.</div>
+                    <div><strong>Start the service:</strong><code>${g.start_server}</code></div>
+                    <div><strong>Fetch Granite 4 (IBM):</strong><code>${g.pull_model}</code></div>
+                    <div><strong>Run the model:</strong><code>${g.run_model}</code></div>
+                </div>
+            `;
+        }
+
+        function renderPromptStep(container) {
+            container.innerHTML = `
+                <div>
+                    <h2 class="section-title">System prompt</h2>
+                    <p class="section-subtitle">Define your assistant's voice and guardrails. This prompt is sent with every conversation.</p>
+                </div>
+                <label class="field" for="prompt-input">
+                    Prompt body
+                    <span class="caption">Keep it concise but descriptive. Use sentences to describe style, tone, and rules.</span>
+                    <textarea id="prompt-input" placeholder="Describe how the bot should respond."></textarea>
+                </label>
+            `;
+            bindInput('prompt-input', 'system_prompt');
+        }
+
+        function renderToolsStep(container) {
+            container.innerHTML = `
+                <div>
+                    <h2 class="section-title">Tools & character limits</h2>
+                    <p class="section-subtitle">Enable built-in helpers and decide whether to enforce Discord's 2000 character limit.</p>
+                </div>
+                <div class="toggle-row">
+                    <div class="copy">
+                        <span class="title">Enforce 2000 character limit</span>
+                        <span class="meta">When enabled, responses longer than 2000 characters will be trimmed to keep Discord happy.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-char-limit">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="copy">
+                        <span class="title">Web search tool</span>
+                        <span class="meta">Allow the assistant to use web search plugins when responding.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-search">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="search-settings" style="display:${state.form.search_enabled ? 'block' : 'none'};">
+                    <div class="input-grid two" style="margin-top:18px;">
+                        <label class="field" for="search-provider">
+                            Search provider
+                            <span class="caption">DuckDuckGo works out of the box. Choose SearxNG to use your own instance.</span>
+                            <select id="search-provider">
+                                <option value="duckduckgo">DuckDuckGo</option>
+                                <option value="searxng">SearxNG</option>
+                            </select>
+                        </label>
+                        <label class="field" for="searxng-url" id="searxng-wrapper" style="display:${state.form.search_provider === 'searxng' ? 'block' : 'none'};">
+                            SearxNG URL
+                            <span class="caption">Example: http://localhost:8888</span>
+                            <input id="searxng-url" type="url" placeholder="http://localhost:8888">
+                        </label>
+                    </div>
+                </div>
+                <div class="input-grid two" style="margin-top:18px;">
+                    <label class="field" for="dashboard-enabled">
+                        Dashboard
+                        <span class="caption">Keep the dark-mode dashboard enabled for control and monitoring.</span>
+                        <select id="dashboard-enabled">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </label>
+                    <label class="field" for="dashboard-port">
+                        Dashboard port
+                        <span class="caption">Defaults to 5000.</span>
+                        <input id="dashboard-port" type="number" min="1024" max="65535">
+                    </label>
+                </div>
+            `;
+            bindToggle('toggle-char-limit', 'enforce_char_limit');
+            bindToggle('toggle-search', 'search_enabled');
+            bindInput('searxng-url', 'searxng_url');
+            const providerSelect = document.getElementById('search-provider');
+            if (providerSelect) {
+                providerSelect.value = state.form.search_provider;
+                providerSelect.addEventListener('change', () => {
+                    state.form.search_provider = providerSelect.value;
+                    renderStep();
+                });
+            }
+            const dashSelect = document.getElementById('dashboard-enabled');
+            if (dashSelect) {
+                dashSelect.value = state.form.dashboard_enabled ? 'true' : 'false';
+                dashSelect.addEventListener('change', () => {
+                    state.form.dashboard_enabled = dashSelect.value === 'true';
+                });
+            }
+            bindInput('dashboard-port', 'dashboard_port', (v) => parseInt(v, 10) || 5000);
+        }
+
+        function renderScreeningStep(container) {
+            container.innerHTML = `
+                <div>
+                    <h2 class="section-title">Safety & screening</h2>
+                    <p class="section-subtitle">Optional content screening can block or escalate unsafe responses using an LLM pass.</p>
+                </div>
+                <div class="toggle-row">
+                    <div class="copy">
+                        <span class="title">Enable content screening</span>
+                        <span class="meta">Runs replies through an additional moderation policy before sending.</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-screening">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="screening-settings" style="display:${state.form.screening_enabled ? 'block' : 'none'};">
+                    <div class="input-grid two" style="margin-top:18px;">
+                        <label class="field" for="screening-model">
+                            Screening model
+                            <span class="caption">Use a cheap safety-focused model or reuse your main provider.</span>
+                            <input id="screening-model" type="text">
+                        </label>
+                        <label class="field" for="screening-action">
+                            Screening action
+                            <span class="caption">Choose how to react when content violates the policy.</span>
+                            <select id="screening-action">
+                                <option value="block">Block the response</option>
+                                <option value="escalate">Escalate to a moderation channel</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label class="field" for="screening-policy" style="margin-top:18px;">
+                        Moderation policy
+                        <span class="caption">Explain what is considered unsafe. The assistant must follow these rules.</span>
+                        <textarea id="screening-policy"></textarea>
+                    </label>
+                    <label class="field" for="screening-channel" id="screening-channel-wrapper" style="display:${state.form.screening_action === 'escalate' ? 'block' : 'none'};margin-top:18px;">
+                        Moderation channel ID
+                        <span class="caption">Discord channel ID where flagged responses should be posted.</span>
+                        <input id="screening-channel" type="text" placeholder="123456789012345678">
+                    </label>
+                </div>
+            `;
+            bindToggle('toggle-screening', 'screening_enabled');
+            bindInput('screening-model', 'screening_model');
+            bindInput('screening-policy', 'screening_policy');
+            bindInput('screening-channel', 'screening_channel_id');
+            const actionSelect = document.getElementById('screening-action');
+            if (actionSelect) {
+                actionSelect.value = state.form.screening_action;
+                actionSelect.addEventListener('change', () => {
+                    state.form.screening_action = actionSelect.value;
+                    renderStep();
+                });
+            }
+        }
+
+        function renderReviewStep(container) {
+            const summary = [
+                { label: 'Discord prefix', value: state.form.prefix },
+                { label: 'AI provider', value: state.form.provider },
+                { label: 'Model', value: state.form.model || 'Custom' },
+                { label: 'Temperature', value: state.form.temperature },
+                { label: 'Max tokens', value: state.form.max_tokens || 'auto' },
+                { label: 'Web search', value: state.form.search_enabled ? `Enabled (${state.form.search_provider})` : 'Disabled' },
+                { label: 'Enforce char limit', value: state.form.enforce_char_limit ? 'Enabled' : 'Disabled' },
+                { label: 'Dashboard', value: state.form.dashboard_enabled ? `Enabled (port ${state.form.dashboard_port})` : 'Disabled' },
+                { label: 'Content screening', value: state.form.screening_enabled ? `${state.form.screening_action} policy` : 'Disabled' }
+            ];
+
+            container.innerHTML = `
+                <div>
+                    <h2 class="section-title">Review settings</h2>
+                    <p class="section-subtitle">Double-check your configuration before saving. You can change everything later from the dashboard.</p>
+                </div>
+                <div class="summary-grid">
+                    ${summary.map(item => `
+                        <div class="summary-item">
+                            <span class="label">${item.label}</span>
+                            <span class="value">${item.value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div id="finish-panel" class="finish-actions" style="display:${state.submitting ? 'flex' : 'none'}"></div>
+            `;
+        }
+
+        function renderCompletion(container, data) {
+            container.innerHTML = `
+                <div class="alert success">
+                    Setup complete! Configuration saved to <code>.env</code> and <code>config.yaml</code>.
+                </div>
+                <div class="finish-actions">
+                    <button class="btn btn-success" id="open-dashboard-btn">Open dashboard</button>
+                    <button class="btn btn-secondary" id="close-window-btn">Close this window</button>
+                </div>
+                <p class="section-subtitle" style="margin-top:12px;">${data.allowLaunch ? 'We will launch the bot and dashboard for you in a new window.' : 'Return to the terminal to continue starting the bot when ready.'}</p>
+            `;
+            const openBtn = document.getElementById('open-dashboard-btn');
+            if (openBtn) {
+                if (data.allowLaunch) {
+                    openBtn.addEventListener('click', async () => {
+                        openBtn.disabled = true;
+                        const res = await fetch('/api/setup/open-dashboard', { method: 'POST' });
+                        if (res.ok) {
+                            showToast('Launching dashboard...', 'success');
+                            setTimeout(() => window.open('http://127.0.0.1:5000/', '_blank'), 1200);
+                        } else {
+                            const payload = await res.json().catch(() => ({}));
+                            showToast(payload.error || 'Unable to launch dashboard automatically.', 'error');
+                            openBtn.disabled = false;
+                        }
+                    });
+                } else {
+                    openBtn.textContent = 'Open dashboard (manual)';
+                    openBtn.addEventListener('click', () => {
+                        window.open('http://127.0.0.1:5000/', '_blank');
+                    });
+                }
+            }
+            const closeBtn = document.getElementById('close-window-btn');
+            if (closeBtn) closeBtn.addEventListener('click', () => window.close());
+        }
+
+        function renderStep() {
+            updateStepper();
+            const container = document.getElementById('step-body');
+            if (state.step === 0) renderDiscordStep(container);
+            if (state.step === 1) renderProviderStep(container);
+            if (state.step === 2) renderPromptStep(container);
+            if (state.step === 3) renderToolsStep(container);
+            if (state.step === 4) renderScreeningStep(container);
+            if (state.step === 5) renderReviewStep(container);
+            updateNavButtons();
+        }
+
+        function updateNavButtons() {
+            const backBtn = document.getElementById('back-btn');
+            const nextBtn = document.getElementById('next-btn');
+            backBtn.disabled = state.step === 0 || state.submitting;
+            if (state.step === state.totalSteps - 1) {
+                nextBtn.textContent = state.submitting ? 'Saving…' : 'Finish';
+                nextBtn.classList.toggle('btn-success', true);
+            } else {
+                nextBtn.textContent = 'Next';
+                nextBtn.classList.remove('btn-success');
+            }
+            nextBtn.disabled = state.submitting;
+        }
+
+        function validateStep(step) {
+            if (step === 0) {
+                if (!state.tokenPreset && !state.form.discord_token.trim()) {
+                    showToast('Please enter your Discord bot token.', 'error');
+                    return false;
+                }
+                if (!state.form.prefix.trim()) {
+                    showToast('Command prefix cannot be empty.', 'error');
+                    return false;
+                }
+            }
+            if (step === 1) {
+                if (!state.form.model.trim()) {
+                    showToast('Please enter a model name.', 'error');
+                    return false;
+                }
+                if (state.form.provider !== 'ollama' && !state.form.api_key.trim() && !state.apiKeysSet[state.form.provider]) {
+                    showToast('Please provide the API key for the selected provider.', 'error');
+                    return false;
+                }
+            }
+            if (step === 2) {
+                if (!state.form.system_prompt.trim()) {
+                    showToast('System prompt cannot be empty.', 'error');
+                    return false;
+                }
+            }
+            if (step === 3) {
+                if (state.form.search_enabled && state.form.search_provider === 'searxng' && !state.form.searxng_url.trim()) {
+                    showToast('Enter the SearxNG URL or switch providers.', 'error');
+                    return false;
+                }
+            }
+            if (step === 4) {
+                if (state.form.screening_enabled) {
+                    if (!state.form.screening_policy.trim()) {
+                        showToast('Screening policy cannot be empty.', 'error');
+                        return false;
+                    }
+                    if (state.form.screening_action === 'escalate' && !/^[0-9]+$/.test(state.form.screening_channel_id.trim())) {
+                        showToast('Provide a numeric Discord channel ID for escalation.', 'error');
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        async function submitSetup() {
+            if (!validateStep(state.step)) return;
+            state.submitting = true;
+            updateNavButtons();
+            const res = await fetch('/api/setup/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state.form)
+            });
+            const payload = await res.json().catch(() => ({ success: false, error: 'Unexpected error' }));
+            if (!payload.success) {
+                showToast(payload.error || 'Failed to save configuration.', 'error');
+                state.submitting = false;
+                updateNavButtons();
+                return;
+            }
+            state.submitting = false;
+            updateNavButtons();
+            showToast('Configuration saved successfully!', 'success');
+            const container = document.getElementById('step-body');
+            renderCompletion(container, payload);
+            document.getElementById('next-btn').disabled = true;
+            document.getElementById('back-btn').disabled = true;
+        }
+
+        document.getElementById('back-btn').addEventListener('click', () => {
+            if (state.submitting) return;
+            if (state.step > 0) {
+                state.step -= 1;
+                renderStep();
+            }
+        });
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            if (state.submitting) return;
+            if (!validateStep(state.step)) return;
+            if (state.step === state.totalSteps - 1) {
+                submitSetup();
+            } else {
+                state.step += 1;
+                renderStep();
+            }
+        });
+
+        async function bootstrap() {
+            try {
+                const res = await fetch('/api/setup/state');
+                const payload = await res.json();
+                if (!payload.success) {
+                    showToast('Unable to load setup state.', 'error');
+                    return;
+                }
+                state.providers = payload.providers || [];
+                state.models = payload.models || {};
+                state.ollamaGuide = payload.ollamaGuide || {};
+                state.allowLaunch = payload.allowLaunch;
+                state.autoStart = payload.autoStartDashboard;
+                state.tokenPreset = Boolean(payload.data.discordTokenSet);
+                state.apiKeysSet = payload.data.apiKeysSet || {};
+                state.form = {
+                    ...state.form,
+                    prefix: payload.data.prefix || '!',
+                    provider: payload.data.provider || 'gemini',
+                    model: payload.data.model || 'gemini-2.5-flash',
+                    temperature: payload.data.temperature ?? 0.7,
+                    max_tokens: payload.data.maxTokens ?? '2048',
+                    system_prompt: payload.data.systemPrompt || '',
+                    enforce_char_limit: payload.data.enforceCharLimit || false,
+                    search_enabled: payload.data.searchEnabled ?? true,
+                    search_provider: payload.data.searchProvider || 'duckduckgo',
+                    searxng_url: payload.data.searxngUrl || 'http://localhost:8888',
+                    dashboard_enabled: payload.data.dashboardEnabled ?? true,
+                    dashboard_port: payload.data.dashboardPort ?? 5000,
+                    screening_enabled: payload.data.screeningEnabled ?? false,
+                    screening_model: payload.data.screeningModel || payload.data.model || 'gemini-2.5-flash',
+                    screening_action: payload.data.screeningAction || 'block',
+                    screening_policy: payload.data.screeningPolicy || '',
+                    screening_channel_id: payload.data.screeningChannelId || ''
+                };
+                if (!state.form.system_prompt) {
+                    state.form.system_prompt = `${state.form.prefix} You are a helpful Discord bot assistant.`;
+                }
+            } catch (error) {
+                console.error('Failed to bootstrap setup wizard', error);
+                showToast('Failed to load setup data.', 'error');
+            } finally {
+                renderStep();
+            }
+        }
+
+        bootstrap();
+    </script>
+</body>
+</html>
