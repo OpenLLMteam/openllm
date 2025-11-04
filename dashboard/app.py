@@ -195,18 +195,51 @@ def create_app(config_manager: Optional[ConfigManager] = None, bot = None):
     
     @app.route('/api/plugins')
     def api_plugins():
-        """Get installed plugins."""
-        with sqlite3.connect(app.config_manager.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name, version, enabled FROM plugins")
-            
-            plugins = []
-            for row in cursor.fetchall():
-                plugins.append({
-                    'name': row[0],
-                    'version': row[1],
-                    'enabled': bool(row[2])
-                })
+        """Get installed plugins (from filesystem and database)."""
+        import json
+        from pathlib import Path
+        
+        plugins_dir = Path('plugins')
+        plugins = []
+        
+        # Get database plugin states
+        db_plugins = {}
+        try:
+            with sqlite3.connect(app.config_manager.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name, version, enabled FROM plugins")
+                for row in cursor.fetchall():
+                    db_plugins[row[0]] = {
+                        'version': row[1],
+                        'enabled': bool(row[2])
+                    }
+        except sqlite3.OperationalError:
+            # Table doesn't exist yet
+            pass
+        
+        # Scan filesystem for actual plugins
+        if plugins_dir.exists():
+            for plugin_dir in plugins_dir.iterdir():
+                if not plugin_dir.is_dir():
+                    continue
+                
+                manifest_path = plugin_dir / 'manifest.json'
+                if manifest_path.exists():
+                    try:
+                        with open(manifest_path, 'r', encoding='utf-8') as f:
+                            manifest = json.load(f)
+                            plugin_name = manifest.get('name', plugin_dir.name)
+                            
+                            # Get state from database if available
+                            db_info = db_plugins.get(plugin_name, {})
+                            
+                            plugins.append({
+                                'name': plugin_name,
+                                'version': db_info.get('version', manifest.get('version', '1.0.0')),
+                                'enabled': db_info.get('enabled', manifest.get('builtin', False))
+                            })
+                    except Exception as e:
+                        print(f"Error loading plugin manifest {plugin_dir.name}: {e}")
         
         return jsonify(plugins)
     
@@ -376,7 +409,11 @@ def create_app(config_manager: Optional[ConfigManager] = None, bot = None):
                     if manifest_path.exists():
                         try:
                             with open(manifest_path, 'r', encoding='utf-8') as f:
-                                manifest = json.load(f)
+                                content = f.read().strip()
+                                if not content:
+                                    print(f"Skipping plugin {plugin_dir.name}: Empty manifest.json")
+                                    continue
+                                manifest = json.loads(content)
                                 
                                 # Check if plugin is installed
                                 installed = False
@@ -587,19 +624,26 @@ def create_app(config_manager: Optional[ConfigManager] = None, bot = None):
                         
                         manifest_path = plugin_dir / 'manifest.json'
                         if manifest_path.exists():
-                            with open(manifest_path, 'r', encoding='utf-8') as f:
-                                manifest = json.load(f)
-                                
-                                # Check if this tool belongs to this plugin
-                                tool_names_in_plugin = [t.get('name') for t in manifest.get('tools', [])]
-                                if tool_name in tool_names_in_plugin:
-                                    plugin_info = {
-                                        'name': manifest.get('name'),
-                                        'icon': manifest.get('icon', '🔌'),
-                                        'author': manifest.get('author', 'Unknown')
-                                    }
-                                    builtin = manifest.get('builtin', False)
-                                    break
+                            try:
+                                with open(manifest_path, 'r', encoding='utf-8') as f:
+                                    content = f.read().strip()
+                                    if not content:
+                                        continue
+                                    manifest = json.loads(content)
+                                    
+                                    # Check if this tool belongs to this plugin
+                                    tool_names_in_plugin = [t.get('name') for t in manifest.get('tools', [])]
+                                    if tool_name in tool_names_in_plugin:
+                                        plugin_info = {
+                                            'name': manifest.get('name'),
+                                            'icon': manifest.get('icon', '🔌'),
+                                            'author': manifest.get('author', 'Unknown')
+                                        }
+                                        builtin = manifest.get('builtin', False)
+                                        break
+                            except (json.JSONDecodeError, KeyError) as e:
+                                # Skip invalid manifests
+                                continue
                 
                 # Check if tool is enabled (get from first server config)
                 enabled = False
