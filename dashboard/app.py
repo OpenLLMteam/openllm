@@ -336,9 +336,63 @@ def create_app(config_manager: Optional[ConfigManager] = None, bot = None):
             if 'max_tokens' in data:
                 app.config_manager.set('llm.max_tokens', int(data['max_tokens']))
             
+            if 'system_prompt' in data:
+                app.config_manager.set('llm.system_prompt', data['system_prompt'])
+            
             return jsonify({'success': True, 'message': 'LLM configuration updated'})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 400
+    
+    @app.route('/api/config/llm/generate-prompt', methods=['POST'])
+    def api_generate_prompt():
+        """Use AI to generate/enhance a system prompt."""
+        try:
+            import asyncio
+            from src.llm.factory import LLMProviderFactory
+            from src.llm.base import Message
+            
+            data = request.json
+            prompt = data.get('prompt', '')
+            server_id = data.get('server_id')
+            
+            if not prompt:
+                return jsonify({'success': False, 'error': 'No prompt provided'}), 400
+            
+            # Get server config or use defaults
+            if server_id:
+                config = app.config_manager.get_server_config(server_id)
+            else:
+                config = {
+                    'llm_provider': app.config_manager.get('llm.default_provider'),
+                    'llm_model': app.config_manager.get('llm.default_model'),
+                    'temperature': 0.7,
+                    'max_tokens': 500
+                }
+            
+            # Create LLM provider
+            provider = LLMProviderFactory.create_provider(config['llm_provider'])
+            
+            # Generate the enhanced prompt
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                response = loop.run_until_complete(provider.complete(
+                    messages=[Message(role='user', content=prompt)],
+                    model=config['llm_model'],
+                    temperature=config['temperature'],
+                    max_tokens=config.get('max_tokens', 500)
+                ))
+                
+                enhanced_prompt = response.content.strip()
+                return jsonify({'success': True, 'prompt': enhanced_prompt})
+            finally:
+                loop.close()
+                
+        except Exception as e:
+            import traceback
+            print(f"Error generating prompt: {traceback.format_exc()}")
+            return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/logs')
     def api_logs():

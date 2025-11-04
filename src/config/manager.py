@@ -178,7 +178,7 @@ class ConfigManager:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT llm_provider, llm_model, temperature, max_tokens, system_prompt, enabled_tools, config_json FROM server_config WHERE server_id = ?",
+                "SELECT llm_provider, llm_model, temperature, max_tokens, system_prompt, enabled_tools, enforce_char_limit, config_json FROM server_config WHERE server_id = ?",
                 (server_id,)
             )
             result = cursor.fetchone()
@@ -190,18 +190,19 @@ class ConfigManager:
                     'llm_model': result[1] or self.get('llm.default_model'),
                     'temperature': result[2] if result[2] is not None else self.get('llm.temperature'),
                     'max_tokens': result[3] or self.get('llm.max_tokens'),
-                    'system_prompt': result[4],
-                    'enabled_tools': result[5].split(',') if result[5] else None
+                    'system_prompt': result[4] or self.get('llm.system_prompt', ''),
+                    'enabled_tools': result[5].split(',') if result[5] else None,
+                    'enforce_char_limit': bool(result[6]) if result[6] is not None else False
                 }
                 
                 # Merge with config_json if present
-                if result[6]:
-                    json_config = json.loads(result[6])
+                if result[7]:
+                    json_config = json.loads(result[7])
                     config.update(json_config)
                 
                 # If enabled_tools is still None, use empty list (will be set by bot on first run)
                 if config['enabled_tools'] is None:
-                    config['enabled_tools'] = json_config.get('enabled_tools', []) if result[6] else []
+                    config['enabled_tools'] = json_config.get('enabled_tools', []) if result[7] else []
                 
                 return config
             else:
@@ -211,6 +212,7 @@ class ConfigManager:
                     'llm_model': self.get('llm.default_model'),
                     'temperature': self.get('llm.temperature'),
                     'max_tokens': self.get('llm.max_tokens'),
+                    'system_prompt': self.get('llm.system_prompt', ''),
                     'enabled_tools': []  # Empty list - bot will populate on startup
                 }
     
@@ -224,11 +226,21 @@ class ConfigManager:
         """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
+            
+            # Extract specific fields for columns
+            llm_provider = config.get('llm_provider')
+            llm_model = config.get('llm_model')
+            temperature = config.get('temperature')
+            max_tokens = config.get('max_tokens')
+            system_prompt = config.get('system_prompt')
+            enabled_tools = ','.join(config.get('enabled_tools', [])) if isinstance(config.get('enabled_tools'), list) else config.get('enabled_tools')
+            enforce_char_limit = config.get('enforce_char_limit', 0)
+            
             cursor.execute("""
                 INSERT OR REPLACE INTO server_config 
-                (server_id, config_json, updated_at)
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-            """, (server_id, json.dumps(config)))
+                (server_id, llm_provider, llm_model, temperature, max_tokens, system_prompt, enabled_tools, enforce_char_limit, config_json, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """, (server_id, llm_provider, llm_model, temperature, max_tokens, system_prompt, enabled_tools, enforce_char_limit, json.dumps(config)))
             conn.commit()
         
         logger.info(f"Updated config for server {server_id}")

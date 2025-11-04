@@ -201,16 +201,21 @@ class DiscordLLMBot:
             if message.author == self.bot.user:
                 return
             
+            logger.debug(f"Received message from {message.author}: {message.content[:100]}")
+            
             # Check if bot is mentioned or message starts with prefix
             mentioned = self.bot.user in message.mentions
             prefix = self.config_manager.get('bot.prefix', '!')
             has_prefix = message.content.startswith(prefix)
+            
+            logger.debug(f"mentioned={mentioned}, has_prefix={has_prefix}")
             
             # Check if DMs are enabled
             is_dm = isinstance(message.channel, discord.DMChannel)
             dm_enabled = self.config_manager.get('bot.enable_dm', False)
             
             if mentioned or has_prefix or (is_dm and dm_enabled):
+                logger.info(f"Triggering LLM handler for message: {message.content[:50]}")
                 await self._handle_llm_message(message)
             
             # Process commands
@@ -223,6 +228,8 @@ class DiscordLLMBot:
         Args:
             message: Discord message
         """
+        logger.info(f"Processing message {message.id} from {message.author}: {message.content[:50]}")
+        
         try:
             # Show typing indicator
             async with message.channel.typing():
@@ -236,8 +243,9 @@ class DiscordLLMBot:
                 
                 # Clean message content
                 content = message.content
-                # Remove bot mention
+                # Remove bot mention (handle both <@ID> and <@!ID> formats)
                 content = content.replace(f'<@{self.bot.user.id}>', '').strip()
+                content = content.replace(f'<@!{self.bot.user.id}>', '').strip()
                 # Remove prefix if present
                 prefix = self.config_manager.get('bot.prefix', '!')
                 if content.startswith(prefix):
@@ -253,7 +261,7 @@ class DiscordLLMBot:
                 
                 # Add system prompt if this is the first message
                 if not conversation:
-                    system_prompt = self.config_manager.get('prompts.system', '')
+                    system_prompt = self.config_manager.get('llm.system_prompt', '')
                     
                     # Add character limit instruction if enabled
                     if server_config.get('enforce_char_limit', False):
@@ -269,6 +277,9 @@ class DiscordLLMBot:
                     Message(role='user', content=content),
                     server_config.get('llm_model')
                 )
+                
+                # Update conversation in storage
+                self.conversations[server_id][str(message.channel.id)] = conversation
                 
                 # Get LLM provider
                 provider = self._get_llm_provider(
@@ -328,6 +339,9 @@ class DiscordLLMBot:
                     Message(role='assistant', content=response.content),
                     server_config.get('llm_model')
                 )
+                
+                # Update conversation in storage
+                self.conversations[server_id][str(message.channel.id)] = conversation
                 
                 # Send response
                 await self._send_response(message, response.content)

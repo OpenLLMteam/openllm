@@ -5,6 +5,7 @@ and persists configuration to both the YAML config and .env file.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
@@ -20,6 +21,8 @@ from dotenv import set_key
 from werkzeug.serving import make_server
 
 from src.config.manager import ConfigManager
+from src.llm.factory import LLMProviderFactory
+from src.llm.base import Message
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -350,6 +353,55 @@ def create_setup_app(options: SetupOptions) -> Flask:
         except Exception as exc:  # pragma: no cover - defensive
             logger.error("Failed to launch main bot process", exc_info=True)
             return jsonify({"success": False, "error": str(exc)}), 500
+
+    @app.route("/api/setup/generate-prompt", methods=["POST"])
+    def generate_prompt():
+        payload = request.get_json(force=True, silent=True) or {}
+        user_request = payload.get("user_request", "").strip()
+        
+        if not user_request:
+            return jsonify({"success": False, "error": "Please describe what you want your bot to do."}), 400
+
+        provider = payload.get("provider")
+        api_key = payload.get("api_key", "").strip()
+        model = payload.get("model", "").strip()
+
+        if not provider or not model:
+            return jsonify({"success": False, "error": "Provider and model are required."}), 400
+
+        if provider != "ollama" and not api_key:
+            return jsonify({"success": False, "error": f"Please provide your {provider.title()} API key."}), 400
+
+        try:
+            # Create LLM provider instance
+            llm = LLMProviderFactory.create_provider(provider, api_key=api_key)
+            
+            # Generate the prompt
+            assistant_prompt = f"""You are a helpful assistant that creates system prompts for Discord bots.
+The user wants their bot to: {user_request}
+
+Create a clear, concise system prompt (2-4 sentences) that defines the bot's personality, tone, and behavior.
+The prompt should be professional and suitable for a Discord bot.
+
+Respond with ONLY the system prompt text, nothing else."""
+            
+            async def generate():
+                response = await llm.complete(
+                    messages=[Message(role="user", content=assistant_prompt)],
+                    model=model,
+                    max_tokens=300,
+                    temperature=0.7
+                )
+                return response.content.strip()
+            
+            # Run async generation
+            generated_prompt = asyncio.run(generate())
+            
+            return jsonify({"success": True, "prompt": generated_prompt})
+            
+        except Exception as exc:
+            logger.error("Failed to generate prompt", exc_info=True)
+            return jsonify({"success": False, "error": f"Could not generate prompt: {str(exc)}"}), 500
 
     return app
 

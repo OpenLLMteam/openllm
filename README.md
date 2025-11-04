@@ -1,6 +1,6 @@
 an entirely vibecoded discord bot platform!
 im planning on keeping this updated and adding new features
-at the moment there is no plugin marketplace but its very early days 
+at the moment there is no plugin marketplace but its very early days
 all contributions welcome and appreciated (especially gui imrovements lol)
 
 
@@ -15,18 +15,19 @@ all contributions welcome and appreciated (especially gui imrovements lol)
 
 # 🤖 OpenLLM
 
-OpenLLM — a powerful Discord assistant platform powered by Large Language Models with a modern GUI dashboard and extensive customization options.
+OpenLLM — a powerful Discord assistant platform powered by Large Language Models with a modern web dashboard and extensive customization options.
 
 ## ✨ Features
 
 - 🧠 **Multi-LLM Support**: Google Gemini (recommended), OpenAI, Anthropic, OpenRouter, Ollama
-- 🎨 **Modern Dashboard**: Fully editable web-based GUI for configuration and monitoring
-- 🖥️ **GUI Setup Wizard**: User-friendly setup experience with customtkinter
+- 🎨 **Modern Web Dashboard**: Dark-mode web interface for configuration and monitoring
+- 🌐 **Web Setup Wizard**: Browser-based setup experience with guided configuration
 - 🔧 **Highly Customizable**: Plugin system and MCP server integration
 - 🔍 **Web Search**: Built-in web search tool with multiple providers
 - 🛡️ **Content Moderation**: Optional message policy screening
 - 📊 **Analytics**: Usage statistics and cost tracking
 - 🔌 **Plugin Marketplace**: Browse and install community extensions
+- 🪟 **Windows Support**: One-click setup with `setup.bat`
 
 ## 🚀 Quick Start
 
@@ -38,6 +39,27 @@ OpenLLM — a powerful Discord assistant platform powered by Large Language Mode
 
 ### Installation
 
+#### Windows (Recommended)
+
+1. **Download/Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd openllm
+   ```
+
+2. **Run the setup script**
+   ```bash
+   # Double-click setup.bat or run from command prompt
+   setup.bat
+   ```
+   
+   This will:
+   - Create a virtual environment
+   - Install all dependencies
+   - Launch the web setup wizard in your browser
+
+#### Linux/Mac
+
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
@@ -47,12 +69,9 @@ OpenLLM — a powerful Discord assistant platform powered by Large Language Mode
 2. **Create a virtual environment**
    ```bash
    python -m venv venv
-   
-   # Windows
-   venv\Scripts\activate
-   
-   # Linux/Mac
-   source venv/bin/activate
+   source venv/bin/activate  # Linux/Mac
+   # or
+   venv\Scripts\activate     # Windows (alternative)
    ```
 
 3. **Install dependencies**
@@ -65,12 +84,12 @@ OpenLLM — a powerful Discord assistant platform powered by Large Language Mode
    python check_install.py
    ```
 
-5. **Run GUI Setup Wizard**
+5. **Run web setup wizard**
    ```bash
    python main.py --setup
    ```
    
-   The setup wizard will guide you through:
+   The setup wizard will open in your browser and guide you through:
    - Discord bot configuration
    - LLM provider selection (Gemini recommended for best value)
    - Tool configuration
@@ -83,14 +102,15 @@ OpenLLM — a powerful Discord assistant platform powered by Large Language Mode
 
 ## 📖 Configuration
 
-### GUI Setup Wizard
+### Web Setup Wizard
 
-On first launch or when using `--setup`, a modern GUI wizard will guide you through:
+On first launch or when using `--setup`, a modern web-based wizard will guide you through:
 
 1. Discord bot token configuration
 2. Selecting your preferred LLM provider (Gemini recommended)
 3. Entering API keys
 4. Configuring enabled tools (web search, etc.)
+5. Setting up content moderation (optional)
 
 The wizard saves everything to `.env` and `config.yaml` automatically.
 

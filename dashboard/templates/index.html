@@ -682,6 +682,10 @@
                             <span class="stat-label">Max tokens</span>
                             <span class="stat-value" id="llm-display-max">--</span>
                         </div>
+                        <div class="stat">
+                            <span class="stat-label">System Prompt</span>
+                            <span class="stat-value" id="llm-display-system-prompt" style="font-size:13px;line-height:1.5;color:var(--muted);">--</span>
+                        </div>
                     </div>
                     <form id="llm-form" class="hidden">
                         <div class="form-group">
@@ -700,6 +704,24 @@
                         <div class="form-group">
                             <label for="llm-max-input">Max tokens</label>
                             <input id="llm-max-input" class="form-control" placeholder="4096" />
+                        </div>
+                        <div class="form-group">
+                            <label for="llm-system-prompt-input">
+                                System Prompt <span style="color:var(--muted);font-size:12px;">(personality & instructions)</span>
+                            </label>
+                            <div style="display:flex;gap:8px;margin-bottom:8px;">
+                                <button type="button" class="btn btn-secondary" id="ai-enhance-prompt-btn" style="flex:0 0 auto;">✨ Enhance with AI</button>
+                                <button type="button" class="btn btn-secondary hidden" id="ai-cancel-btn" style="flex:0 0 auto;">Cancel</button>
+                            </div>
+                            <textarea id="llm-system-prompt-input" class="form-control" rows="4" placeholder="You are a helpful AI assistant..."></textarea>
+                            <div id="ai-prompt-helper" class="hidden" style="margin-top:12px;padding:16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:12px;">
+                                <label style="display:block;margin-bottom:8px;font-size:13px;font-weight:600;">Describe how you want to modify the prompt:</label>
+                                <textarea id="ai-instruction-input" class="form-control" rows="2" placeholder="e.g., Make it more professional, Add humor, Make it respond in pirate speak..." style="margin-bottom:8px;"></textarea>
+                                <button type="button" class="btn btn-primary" id="ai-generate-btn" style="width:100%;">Generate Enhanced Prompt</button>
+                                <div id="ai-loading" class="hidden" style="margin-top:12px;text-align:center;color:var(--muted);font-size:13px;">
+                                    <span>🤖 AI is working on your prompt...</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="toggle-switch">
                             <input type="checkbox" id="enforce-char-limit-toggle">
@@ -811,11 +833,13 @@
         const model = config.llm_model || config.llm?.default_model || 'N/A';
         const temperature = config.temperature ?? config.llm?.temperature ?? 'N/A';
         const maxTokens = config.max_tokens ?? config.llm?.max_tokens ?? 'N/A';
+        const systemPrompt = config.system_prompt || config.llm?.system_prompt || 'Not set';
 
         document.getElementById('llm-display-provider').textContent = provider;
         document.getElementById('llm-display-model').textContent = model;
         document.getElementById('llm-display-temperature').textContent = temperature;
         document.getElementById('llm-display-max').textContent = maxTokens;
+        document.getElementById('llm-display-system-prompt').textContent = systemPrompt.length > 150 ? systemPrompt.substring(0, 150) + '...' : systemPrompt;
 
         document.getElementById('status-provider').textContent = provider;
         document.getElementById('summary-provider').textContent = provider;
@@ -845,6 +869,7 @@
         document.getElementById('llm-model-input').value = state.currentConfig.llm_model || state.currentConfig.llm?.default_model || '';
         document.getElementById('llm-temperature-input').value = state.currentConfig.temperature ?? state.currentConfig.llm?.temperature ?? 0.7;
         document.getElementById('llm-max-input').value = state.currentConfig.max_tokens ?? state.currentConfig.llm?.max_tokens ?? 4096;
+        document.getElementById('llm-system-prompt-input').value = state.currentConfig.system_prompt || state.currentConfig.llm?.system_prompt || '';
         document.getElementById('enforce-char-limit-toggle').checked = state.currentConfig.enforce_char_limit ?? false;
     }
 
@@ -951,6 +976,7 @@
                 max_tokens: document.getElementById('llm-max-input').value.trim().toLowerCase() === 'auto'
                     ? 'auto'
                     : parseInt(document.getElementById('llm-max-input').value, 10),
+                system_prompt: document.getElementById('llm-system-prompt-input').value,
                 enforce_char_limit: document.getElementById('enforce-char-limit-toggle').checked ? 1 : 0
             };
 
@@ -1232,6 +1258,67 @@
         });
     }
 
+    function showAiPromptHelper() {
+        document.getElementById('ai-prompt-helper').classList.remove('hidden');
+        document.getElementById('ai-enhance-prompt-btn').classList.add('hidden');
+        document.getElementById('ai-cancel-btn').classList.remove('hidden');
+    }
+
+    function hideAiPromptHelper() {
+        document.getElementById('ai-prompt-helper').classList.add('hidden');
+        document.getElementById('ai-enhance-prompt-btn').classList.remove('hidden');
+        document.getElementById('ai-cancel-btn').classList.add('hidden');
+        document.getElementById('ai-loading').classList.add('hidden');
+    }
+
+    async function generateEnhancedPrompt() {
+        const currentPrompt = document.getElementById('llm-system-prompt-input').value;
+        const instruction = document.getElementById('ai-instruction-input').value.trim();
+        
+        if (!instruction) {
+            alert('Please describe how you want to modify the prompt');
+            return;
+        }
+
+        try {
+            document.getElementById('ai-loading').classList.remove('hidden');
+            document.getElementById('ai-generate-btn').disabled = true;
+
+            const metaPrompt = currentPrompt 
+                ? `Current system prompt:\n${currentPrompt}\n\nUser request: ${instruction}\n\nPlease rewrite the system prompt according to the user's request. Return only the new system prompt, nothing else.`
+                : `Create a system prompt for a Discord bot with the following characteristics: ${instruction}\n\nReturn only the system prompt, nothing else.`;
+
+            // Use the current server's LLM config
+            const response = await fetch('/api/config/llm/generate-prompt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: metaPrompt,
+                    server_id: state.currentServerId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to generate prompt');
+            }
+
+            const data = await response.json();
+            if (data.success && data.prompt) {
+                document.getElementById('llm-system-prompt-input').value = data.prompt;
+                document.getElementById('ai-instruction-input').value = '';
+                hideAiPromptHelper();
+            } else {
+                throw new Error(data.error || 'No prompt returned');
+            }
+        } catch (error) {
+            console.error('AI prompt generation failed:', error);
+            alert('Failed to generate enhanced prompt: ' + error.message);
+        } finally {
+            document.getElementById('ai-loading').classList.add('hidden');
+            document.getElementById('ai-generate-btn').disabled = false;
+        }
+    }
+
     function bindEvents() {
         document.getElementById('llm-edit-btn').addEventListener('click', enterLlmEdit);
         document.getElementById('llm-cancel-btn').addEventListener('click', () => {
@@ -1242,6 +1329,9 @@
         document.getElementById('llm-provider-select').addEventListener('change', event => {
             updateModelOptions(event.target.value);
         });
+        document.getElementById('ai-enhance-prompt-btn').addEventListener('click', showAiPromptHelper);
+        document.getElementById('ai-cancel-btn').addEventListener('click', hideAiPromptHelper);
+        document.getElementById('ai-generate-btn').addEventListener('click', generateEnhancedPrompt);
         document.getElementById('refresh-servers').addEventListener('click', loadServers);
         document.getElementById('refresh-tools').addEventListener('click', loadTools);
         document.getElementById('refresh-plugins').addEventListener('click', loadPlugins);

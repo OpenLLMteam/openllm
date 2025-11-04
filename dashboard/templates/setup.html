@@ -413,6 +413,7 @@
                 model: 'gemini-2.5-flash',
                 temperature: 0.7,
                 max_tokens: '2048',
+                user_request: '',
                 system_prompt: '',
                 enforce_char_limit: false,
                 search_enabled: true,
@@ -610,13 +611,27 @@
                     <h2 class="section-title">System prompt</h2>
                     <p class="section-subtitle">Define your assistant's voice and guardrails. This prompt is sent with every conversation.</p>
                 </div>
+                <div class="input-grid">
+                    <label class="field" for="user-request-input">
+                        Describe your bot
+                        <span class="caption">Tell us what you want your bot to do, and AI will generate a custom system prompt for you.</span>
+                        <input id="user-request-input" type="text" placeholder="e.g., A helpful coding assistant that explains concepts clearly" autocomplete="off">
+                    </label>
+                    <div style="display:flex;gap:12px;">
+                        <button class="btn btn-secondary" id="generate-prompt-btn" style="flex:1;">🤖 Generate Prompt</button>
+                    </div>
+                </div>
                 <label class="field" for="prompt-input">
-                    Prompt body
-                    <span class="caption">Keep it concise but descriptive. Use sentences to describe style, tone, and rules.</span>
+                    System prompt
+                    <span class="caption">Review and edit the generated prompt, or write your own.</span>
                     <textarea id="prompt-input" placeholder="Describe how the bot should respond."></textarea>
                 </label>
             `;
             bindInput('prompt-input', 'system_prompt');
+            bindInput('user-request-input', 'user_request');
+            
+            // Bind generate prompt button
+            document.getElementById('generate-prompt-btn').addEventListener('click', generatePrompt);
         }
 
         function renderToolsStep(container) {
@@ -941,6 +956,100 @@
                 renderStep();
             }
         });
+
+        async function generatePrompt() {
+            const userRequest = document.getElementById('user-request-input').value.trim();
+            const generateBtn = document.getElementById('generate-prompt-btn');
+            
+            if (!userRequest) {
+                showToast('Please describe what you want your bot to do.', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            generateBtn.disabled = true;
+            generateBtn.textContent = '🤖 Generating...';
+            
+            try {
+                const payload = {
+                    user_request: userRequest,
+                    provider: state.form.provider,
+                    api_key: state.form.api_key,
+                    model: state.form.model
+                };
+                
+                const response = await fetch('/api/setup/generate-prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update the prompt textarea
+                    document.getElementById('prompt-input').value = data.prompt;
+                    state.form.system_prompt = data.prompt;
+                    showToast('Prompt generated successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to generate prompt.', 'error');
+                }
+            } catch (error) {
+                console.error('Generate prompt error:', error);
+                showToast('Failed to generate prompt. Please try again.', 'error');
+            } finally {
+                // Re-enable button
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🤖 Generate Prompt';
+            }
+        }
+
+        async function generatePrompt() {
+            const userRequest = document.getElementById('user-request-input').value.trim();
+            const generateBtn = document.getElementById('generate-prompt-btn');
+            
+            if (!userRequest) {
+                showToast('Please describe what you want your bot to do.', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            generateBtn.disabled = true;
+            generateBtn.textContent = '🤖 Generating...';
+            
+            try {
+                const payload = {
+                    user_request: userRequest,
+                    provider: state.form.provider,
+                    api_key: state.form.api_key,
+                    model: state.form.model
+                };
+                
+                const response = await fetch('/api/setup/generate-prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update the prompt textarea
+                    document.getElementById('prompt-input').value = data.prompt;
+                    state.form.system_prompt = data.prompt;
+                    showToast('Prompt generated successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to generate prompt.', 'error');
+                }
+            } catch (error) {
+                console.error('Generate prompt error:', error);
+                showToast('Failed to generate prompt. Please try again.', 'error');
+            } finally {
+                // Re-enable button
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🤖 Generate Prompt';
+            }
+        }
 
         async function bootstrap() {
             try {
