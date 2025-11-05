@@ -73,17 +73,19 @@ if errorlevel 1 (
     )
 )
 
-REM Start the bot
+REM Start the bot in a new window (activate venv there) and open the dashboard in a browser
 echo.
 echo ========================================
-echo Starting Discord LLM Bot...
+echo Starting Discord LLM Bot in a new window...
 echo ========================================
 echo.
-python main.py
+REM Launch a new cmd window, activate the virtual env there, and run the bot so the current
+REM window remains for logs and doesn't need to keep the venv active.
+start "" cmd /k "call venv\Scripts\activate && python main.py"
 
-REM If bot exits, pause to see errors
-if errorlevel 1 (
-    echo.
-    echo Bot exited with error
-    pause
-)
+REM Give the server a moment to start, then open the dashboard in the default browser.
+echo Waiting for dashboard to become available...
+timeout /t 3 /nobreak >nul
+start "" "http://127.0.0.1:5000"
+
+echo Launched dashboard in your default browser. The bot is running in the new window.
