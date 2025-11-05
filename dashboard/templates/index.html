@@ -456,6 +456,16 @@
             font-size:13px;
             color:var(--muted);
         }
+        .server-instruction {
+            padding:0 0 12px 0;
+            font-size:13px;
+            color:var(--muted);
+        }
+        .selected-server-name {
+            font-size:13px;
+            color:var(--muted);
+            font-weight:400;
+        }
         .toggle-switch {
             display:flex;
             align-items:center;
@@ -961,7 +971,7 @@
             <div class="grid">
                 <div class="card" id="llm-config-card">
                     <div class="card-header">
-                        <h3>LLM Configuration <span id="selected-server-name" style="font-size:13px;color:var(--muted);font-weight:400;"></span></h3>
+                        <h3>LLM Configuration <span id="selected-server-name" class="selected-server-name"></span></h3>
                             <div class="button-group">
                             <button class="btn btn-secondary" id="llm-edit-btn" data-tooltip="Edit LLM settings for this server">Edit</button>
                             <button class="btn btn-primary hidden" id="llm-save-btn" data-tooltip="Save LLM configuration">Save</button>
@@ -1054,7 +1064,7 @@
                         <h3>Server Connections</h3>
                         <button class="btn btn-secondary" id="refresh-servers" data-tooltip="Reload connected servers list">Refresh</button>
                     </div>
-                    <div style="padding:0 0 12px 0;font-size:13px;color:var(--muted);">
+                    <div class="server-instruction">
                         Click a server to view and edit its configuration
                     </div>
                     <div class="server-list" id="server-list">Loading server data...</div>
