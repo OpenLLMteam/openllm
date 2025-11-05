@@ -251,35 +251,108 @@ class DiscordLLMBot:
                 if content.startswith(prefix):
                     content = content[len(prefix):].strip()
                 
-                # Get or create conversation history
+                # Determine conversation root: use the replied-to message id if this
+                # message is a reply; otherwise treat this message as a fresh root.
+                # This scopes context to reply chains instead of the whole channel.
                 if server_id not in self.conversations:
                     self.conversations[server_id] = {}
-                if str(message.channel.id) not in self.conversations[server_id]:
-                    self.conversations[server_id][str(message.channel.id)] = []
-                
-                conversation = self.conversations[server_id][str(message.channel.id)]
-                
-                # Add system prompt if this is the first message
-                if not conversation:
+
+                # message.reference may be None or may have message_id attribute
+                referenced_id = None
+                try:
+                    if getattr(message, 'reference', None) and getattr(message.reference, 'message_id', None):
+                        referenced_id = str(message.reference.message_id)
+                except Exception:
+                    referenced_id = None
+
+                # If this is a reply, use the referenced message id as the conversation root.
+                # Otherwise, start a new conversation keyed by this message id so fresh pings
+                # reset the context.
+                root_id = referenced_id if referenced_id else str(message.id)
+                convo_key = f"{message.channel.id}:{root_id}"
+
+                if convo_key not in self.conversations[server_id]:
+                    # Create a fresh conversation container for this reply chain
+                    self.conversations[server_id][convo_key] = []
+
+                # Build conversation context. If this message is a reply chain, walk
+                # the reply references up to 5 messages and include them as context
+                # (oldest -> newest). Otherwise, this is a fresh conversation.
+                conversation = self.conversations[server_id][convo_key]
+
+                # If this is a reply to another message, traverse up the reply chain
+                # to collect up to 5 prior messages as context.
+                if referenced_id:
+                    chain_msgs = []
+                    next_ref = referenced_id
+                    try:
+                        # Walk backwards through references
+                        while next_ref and len(chain_msgs) < 5:
+                            try:
+                                m = await message.channel.fetch_message(int(next_ref))
+                            except Exception:
+                                break
+                            chain_msgs.append(m)
+                            # Move to the message this one references
+                            try:
+                                next_ref = str(m.reference.message_id) if getattr(m, 'reference', None) and getattr(m.reference, 'message_id', None) else None
+                            except Exception:
+                                next_ref = None
+                    except Exception:
+                        chain_msgs = []
+
+                    # chain_msgs currently holds [nearest_parent, ..., oldest]; reverse to oldest->nearest
+                    chain_msgs = list(reversed(chain_msgs))
+
+                    # Add system prompt at start if configured
                     system_prompt = self.config_manager.get('llm.system_prompt', '')
-                    
-                    # Add character limit instruction if enabled
                     if server_config.get('enforce_char_limit', False):
                         char_limit_instruction = "\n\nIMPORTANT: Keep your responses under 2000 characters to ensure they fit in a single Discord message. Be concise and direct."
                         system_prompt = system_prompt + char_limit_instruction if system_prompt else char_limit_instruction.strip()
-                    
+
                     if system_prompt:
-                        conversation.append(Message(role='system', content=system_prompt))
-                
-                # Add user message and prune conversation to fit token limits
-                conversation = self.conversation_manager.add_message(
-                    conversation, 
-                    Message(role='user', content=content),
-                    server_config.get('llm_model')
-                )
-                
-                # Update conversation in storage
-                self.conversations[server_id][str(message.channel.id)] = conversation
+                        conversation = [Message(role='system', content=system_prompt)]
+                    else:
+                        conversation = []
+
+                    # Append historical chain messages (apply token-aware add_message)
+                    for cm in chain_msgs:
+                        try:
+                            role = 'assistant' if cm.author and self.bot and cm.author.id == self.bot.user.id else 'user'
+                            text = (cm.content or '').replace(f'<@{self.bot.user.id}>', '').replace(f'<@!{self.bot.user.id}>', '').strip()
+                            conversation = self.conversation_manager.add_message(
+                                conversation,
+                                Message(role=role, content=text),
+                                server_config.get('llm_model')
+                            )
+                        except Exception:
+                            continue
+
+                    # Finally add the current user message
+                    conversation = self.conversation_manager.add_message(
+                        conversation,
+                        Message(role='user', content=content),
+                        server_config.get('llm_model')
+                    )
+                else:
+                    # Non-reply: standard behavior - start fresh conversation with system prompt
+                    if not conversation:
+                        system_prompt = self.config_manager.get('llm.system_prompt', '')
+                        if server_config.get('enforce_char_limit', False):
+                            char_limit_instruction = "\n\nIMPORTANT: Keep your responses under 2000 characters to ensure they fit in a single Discord message. Be concise and direct."
+                            system_prompt = system_prompt + char_limit_instruction if system_prompt else char_limit_instruction.strip()
+                        if system_prompt:
+                            conversation.append(Message(role='system', content=system_prompt))
+
+                    # Add user message and prune conversation to fit token limits
+                    conversation = self.conversation_manager.add_message(
+                        conversation,
+                        Message(role='user', content=content),
+                        server_config.get('llm_model')
+                    )
+
+                # Persist conversation under the convo_key
+                self.conversations[server_id][convo_key] = conversation
                 
                 # Get LLM provider
                 provider = self._get_llm_provider(
