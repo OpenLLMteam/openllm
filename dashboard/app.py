@@ -501,14 +501,195 @@ def create_app(config_manager: Optional[ConfigManager] = None, bot = None):
             asyncio.set_event_loop(loop)
             
             try:
-                response = loop.run_until_complete(provider.complete(
-                    messages=[Message(role='user', content=prompt)],
-                    model=config['llm_model'],
-                    temperature=config['temperature'],
-                    max_tokens=config.get('max_tokens', 500)
-                ))
-                
-                enhanced_prompt = response.content.strip()
+                # Optionally include web-search tool(s) if requested
+                include_search = bool(data.get('include_search', True))
+                tool_defs = None
+                if include_search and app.bot:
+                    tool_defs = []
+                    for _, tool in app.bot.tools.items():
+                        try:
+                            # Use tool definition name heuristics to find search tools
+                            tdef = tool.get_definition()
+                            tname = (tdef.name or '').lower()
+                            if 'search' in tname or 'web' in tname:
+                                # Convert to OpenAI-compatible tool descriptor
+                                if hasattr(tool, 'to_openai_tool'):
+                                    tool_defs.append(tool.to_openai_tool())
+                        except Exception:
+                            continue
+
+                # Prepare initial messages
+                messages_for_model = [Message(role='user', content=prompt)]
+
+                # If include_search requested and bot is available, build tool definitions
+                include_search = bool(data.get('include_search', True))
+                tool_definitions = None
+                if include_search and app.bot:
+                    tool_definitions = []
+                    for _, tool in app.bot.tools.items():
+                        try:
+                            if hasattr(tool, 'to_openai_tool'):
+                                tdef = tool.get_definition()
+                                tname = (tdef.name or '').lower()
+                                # Only expose search-like tools for prompt generation
+                                if 'search' in tname or 'web' in tname:
+                                    tool_definitions.append(tool.to_openai_tool())
+                        except Exception:
+                            continue
+
+                # Determine whether multi-step tool calling is allowed (UI toggle)
+                allow_multistep = bool(data.get('allow_multistep', False))
+
+                response = None
+                if allow_multistep:
+                    # Multi-step loop: let the model call tools, execute them, append results,
+                    # and re-call the model until no tool_calls or max depth reached.
+                    max_depth = 5
+                    final_response = None
+                    for depth in range(max_depth):
+                        response = loop.run_until_complete(provider.complete(
+                            messages=messages_for_model,
+                            model=config['llm_model'],
+                            temperature=config['temperature'],
+                            max_tokens=config.get('max_tokens', 500),
+                            tools=tool_definitions
+                        ))
+
+                        # If provider returned tool calls, execute them via app.bot.tools
+                        if response and getattr(response, 'tool_calls', None):
+                            for tool_call in response.tool_calls:
+                                try:
+                                    tool_name = tool_call['function']['name']
+                                    tool_args_str = tool_call['function'].get('arguments')
+                                    # Parse arguments
+                                    import json as _json
+                                    try:
+                                        tool_args = _json.loads(tool_args_str) if isinstance(tool_args_str, str) else tool_args_str
+                                    except Exception:
+                                        try:
+                                            tool_args = eval(tool_args_str)
+                                        except Exception:
+                                            tool_args = {}
+
+                                    result = None
+                                    if app.bot and tool_name in app.bot.tools:
+                                        tool = app.bot.tools[tool_name]
+                                        fn = getattr(tool, 'execute', None)
+                                        if fn:
+                                            try:
+                                                res = fn(**(tool_args or {}))
+                                                if asyncio.iscoroutine(res):
+                                                    result = loop.run_until_complete(res)
+                                                else:
+                                                    result = res
+                                            except TypeError:
+                                                # Try passing as single argument
+                                                try:
+                                                    res = fn(tool_args)
+                                                    if asyncio.iscoroutine(res):
+                                                        result = loop.run_until_complete(res)
+                                                    else:
+                                                        result = res
+                                                except Exception as e:
+                                                    result = f"Tool execution failed: {e}"
+                                            except Exception as e:
+                                                result = f"Tool execution failed: {e}"
+                                    else:
+                                        result = f"Tool {tool_name} not found"
+
+                                    # Append tool result as a tool-role message for the model
+                                    messages_for_model.append(Message(role='tool', content=str(result)))
+                                except Exception as e:
+                                    # Continue to next tool call on error
+                                    logger.error(f"Error executing tool call in generate-prompt: {e}")
+                                    messages_for_model.append(Message(role='tool', content=f"Error executing tool: {e}"))
+
+                            # Continue loop to let model process tool outputs
+                            continue
+
+                        # No tool calls - use this response
+                        final_response = response
+                        break
+
+                    response = final_response
+                else:
+                    # Single-step flow: call provider once with tools; if it returns tool_calls,
+                    # execute them one time and then call the provider once more without tools
+                    try:
+                        initial = loop.run_until_complete(provider.complete(
+                            messages=messages_for_model,
+                            model=config['llm_model'],
+                            temperature=config['temperature'],
+                            max_tokens=config.get('max_tokens', 500),
+                            tools=tool_definitions
+                        ))
+                        # If model asked for tool calls, execute each once and append results
+                        if initial and getattr(initial, 'tool_calls', None):
+                            for tool_call in initial.tool_calls:
+                                try:
+                                    tool_name = tool_call['function']['name']
+                                    tool_args_str = tool_call['function'].get('arguments')
+                                    import json as _json
+                                    try:
+                                        tool_args = _json.loads(tool_args_str) if isinstance(tool_args_str, str) else tool_args_str
+                                    except Exception:
+                                        try:
+                                            tool_args = eval(tool_args_str)
+                                        except Exception:
+                                            tool_args = {}
+
+                                    result = None
+                                    if app.bot and tool_name in app.bot.tools:
+                                        tool = app.bot.tools[tool_name]
+                                        fn = getattr(tool, 'execute', None)
+                                        if fn:
+                                            try:
+                                                res = fn(**(tool_args or {}))
+                                                if asyncio.iscoroutine(res):
+                                                    result = loop.run_until_complete(res)
+                                                else:
+                                                    result = res
+                                            except Exception as e:
+                                                result = f"Tool execution failed: {e}"
+                                    else:
+                                        result = f"Tool {tool_name} not found"
+
+                                    messages_for_model.append(Message(role='tool', content=str(result)))
+                                except Exception as e:
+                                    logger.error(f"Error executing single-step tool call: {e}")
+                                    messages_for_model.append(Message(role='tool', content=f"Error executing tool: {e}"))
+
+                        # After executing tool calls once, request final synthesis without tools
+                        response = loop.run_until_complete(provider.complete(
+                            messages=messages_for_model,
+                            model=config['llm_model'],
+                            temperature=config['temperature'],
+                            max_tokens=config.get('max_tokens', 500),
+                            tools=None
+                        ))
+                    except Exception as e:
+                        logger.error(f"Error in single-step prompt generation: {e}")
+                        response = None
+
+                # If we didn't get a usable response, try one final attempt without tools
+                if not response or not getattr(response, 'content', None) or not str(response.content).strip():
+                    try:
+                        fallback = loop.run_until_complete(provider.complete(
+                            messages=messages_for_model,
+                            model=config['llm_model'],
+                            temperature=config['temperature'],
+                            max_tokens=config.get('max_tokens', 500),
+                            tools=None
+                        ))
+                        response = fallback
+                    except Exception as e:
+                        logger.error(f"Fallback generate-prompt call failed: {e}")
+
+                if not response or not getattr(response, 'content', None) or not str(response.content).strip():
+                    logger.error(f"Generate-prompt: no content returned. final_response={final_response}")
+                    return jsonify({'success': False, 'error': 'No prompt returned'})
+
+                enhanced_prompt = str(response.content).strip()
                 return jsonify({'success': True, 'prompt': enhanced_prompt})
             finally:
                 loop.close()

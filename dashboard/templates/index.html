@@ -1019,7 +1019,17 @@
                             <div id="ai-prompt-helper" class="hidden" style="margin-top:12px;padding:16px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:12px;">
                                 <label style="display:block;margin-bottom:8px;font-size:13px;font-weight:600;">Describe how you want to modify the prompt:</label>
                                 <textarea id="ai-instruction-input" class="form-control" rows="2" placeholder="e.g., Make it more professional, Add humor, Make it respond in pirate speak..." style="margin-bottom:8px;"></textarea>
-                                <button type="button" class="btn btn-primary" id="ai-generate-btn" data-tooltip="Generate an improved system prompt using the current LLM" style="width:100%;">Generate Enhanced Prompt</button>
+                                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                                        <label style="display:flex;align-items:center;gap:8px;" data-tooltip="Allow the LLM to use a web-search tool to fetch live information (recommended)">
+                                            <input type="checkbox" id="ai-include-web-search" checked>
+                                            <span style="font-size:13px;color:var(--muted);">Enable web search</span>
+                                        </label>
+                                        <label style="display:flex;align-items:center;gap:8px;" data-tooltip="Allow the model to call tools multiple times (multi-step). Turn off for a single safe execution cycle.">
+                                            <input type="checkbox" id="ai-multistep-tools">
+                                            <span style="font-size:13px;color:var(--muted);">Allow multi-step tool calls</span>
+                                        </label>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" id="ai-generate-btn" data-tooltip="Generate an improved system prompt using the current LLM" style="width:100%;">Generate Enhanced Prompt</button>
                                 <div id="ai-loading" class="hidden" style="margin-top:12px;text-align:center;color:var(--muted);font-size:13px;">
                                     <span>🤖 AI is working on your prompt...</span>
                                 </div>
@@ -1868,12 +1878,16 @@
                 : `Create a system prompt for a Discord bot with the following characteristics: ${instruction}\n\nReturn only the system prompt, nothing else.`;
 
             // Use the current server's LLM config
+            const includeSearch = document.getElementById('ai-include-web-search')?.checked ?? true;
+            const allowMulti = document.getElementById('ai-multistep-tools')?.checked ?? false;
             const response = await fetch('/api/config/llm/generate-prompt', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: metaPrompt,
-                    server_id: state.currentServerId
+                    server_id: state.currentServerId,
+                    include_search: includeSearch,
+                    allow_multistep: allowMulti
                 })
             });
 
