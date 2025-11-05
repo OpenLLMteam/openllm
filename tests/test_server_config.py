@@ -139,7 +139,6 @@ def test_per_server_config():
             test_db.unlink()
 
     
-
 if __name__ == "__main__":
     try:
         test_per_server_config()
