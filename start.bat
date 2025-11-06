@@ -83,9 +83,17 @@ REM Launch a new cmd window, activate the virtual env there, and run the bot so 
 REM window remains for logs and doesn't need to keep the venv active.
 start "" cmd /k "call venv\Scripts\activate && python main.py"
 
-REM Give the server a moment to start, then open the dashboard in the default browser.
+REM Give the server a moment to start, then ask whether to open the dashboard in the default browser.
 echo Waiting for dashboard to become available...
 timeout /t 3 /nobreak >nul
-start "" "http://127.0.0.1:5000"
 
-echo Launched dashboard in your default browser. The bot is running in the new window.
+echo.
+echo Press ENTER to open the dashboard in your default browser.
+echo If you don't want to open it, press Ctrl+C to cancel or type N then press ENTER to skip.
+set /p OPEN_BROWSER=Press ENTER to open dashboard (or type N then ENTER to skip): 
+if /I "%OPEN_BROWSER%"=="" (
+    start "" "http://127.0.0.1:5000"
+    echo Launched dashboard in your default browser. The bot is running in the new window.
+) else (
+    echo Skipping opening the browser. The bot is running in the new window.
+)
