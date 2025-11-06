@@ -100,7 +100,21 @@ async def main():
     config_manager = ConfigManager()
     if args.setup or not config_manager.is_configured():
         logger.info("Starting web setup wizard...")
-        run_web_setup(auto_start_dashboard=False, allow_launch=False)
+        
+        # Detect if running in Docker and bind to all interfaces
+        setup_host = "0.0.0.0" if os.getenv("DOCKER_CONTAINER") == "true" else "127.0.0.1"
+        setup_port = int(os.getenv("SETUP_PORT", "5050"))
+        
+        if setup_host == "0.0.0.0":
+            logger.info("Docker environment detected - setup wizard will be accessible on network")
+            logger.info("Access at: http://localhost:%d/setup or http://<container-ip>:%d/setup", setup_port, setup_port)
+        
+        run_web_setup(
+            host=setup_host,
+            port=setup_port,
+            auto_start_dashboard=False,
+            allow_launch=False
+        )
         logger.info("Setup complete! Starting bot...")
     
     # Initialize and start the bot

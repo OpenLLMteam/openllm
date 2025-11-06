@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Discord-LLM-Bot</Name>
+  <Repository>your-dockerhub-username/discord-llm-bot:latest</Repository>
+  <Registry>https://hub.docker.com/r/your-dockerhub-username/discord-llm-bot</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/your-username/openllm/issues</Support>
+  <Project>https://github.com/your-username/openllm</Project>
+  <Overview>
+    OpenLLM - A powerful Discord assistant platform powered by Large Language Models.
+    
+    Features:
+    - Multi-LLM Support (Gemini, OpenAI, Anthropic, OpenRouter, local models)
+    - Modern web dashboard for configuration and monitoring
+    - Web-based setup wizard (runs on first start)
+    - Plugin system for extensions
+    - Built-in web search and tools
+    
+    FIRST TIME SETUP:
+    1. Start the container
+    2. Visit http://YOUR-SERVER-IP:5050/setup in your browser
+    3. Complete the web setup wizard
+    4. Dashboard will be available at http://YOUR-SERVER-IP:5000
+    
+    The web setup wizard only runs on first start or when configuration is missing.
+  </Overview>
+  <Category>Tools: Status:Stable</Category>
+  <WebUI>http://[IP]:[PORT:5000]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/your-username/openllm/main/unraid-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/your-username/openllm/main/assets/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled></DateInstalled>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Dashboard Port" Target="5000" Default="5000" Mode="tcp" Description="Web dashboard port (access after setup)" Type="Port" Display="always" Required="true" Mask="false">5000</Config>
+  <Config Name="Setup Wizard Port" Target="5050" Default="5050" Mode="tcp" Description="Setup wizard port (first run only - visit http://YOUR-IP:5050/setup)" Type="Port" Display="always" Required="true" Mask="false">5050</Config>
+  <Config Name="AppData" Target="/app/data" Default="/mnt/user/appdata/discord-llm-bot" Mode="rw" Description="Configuration and database storage" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/discord-llm-bot</Config>
+  <Config Name="Docker Container Flag" Target="DOCKER_CONTAINER" Default="true" Mode="" Description="Internal flag - do not change" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+</Container>

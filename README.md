@@ -119,6 +119,74 @@ Alternatively, the repo includes quick-start scripts to automate these steps:
 
 These scripts will create/activate the virtual environment, install dependencies if needed, run the setup wizard (if configuration is missing), start the bot in a new terminal window, and open the dashboard in your browser.
 
+#### Docker (Easy Setup)
+
+For the easiest deployment, use Docker:
+
+1. **Quick start with docker-compose** (recommended)
+   
+   ```bash
+   # Clone the repository
+   git clone <repository-url>
+   cd openllm
+
+   # Start the container
+   docker-compose up -d
+   ```
+
+2. **Complete web-based setup**
+   
+   On first run, the container will start the web setup wizard:
+   - Open `http://localhost:5050/setup` in your browser
+   - Or from another device: `http://<your-server-ip>:5050/setup`
+   - Follow the guided setup to configure:
+     - Discord bot token
+     - LLM provider and API keys
+     - Optional tools and features
+   
+   After setup completes, the bot starts automatically!
+
+3. **Access the dashboard**
+   - Dashboard: `http://localhost:5000`
+   - Or from network: `http://<your-server-ip>:5000`
+
+**Docker Features:**
+- ✅ **Web Setup Wizard**: Browser-based configuration on first run
+- ✅ **Network Accessible**: Setup from any device on your network
+- ✅ **Persistent data**: Configuration and database saved in `./data` volume
+- ✅ **Health checks**: Built-in container health monitoring
+- ✅ **Easy updates**: Pull new image and restart
+- ✅ **Unraid ready**: Compatible with Unraid Community Applications
+
+**Alternative: Manual Docker run**
+```bash
+docker run -d \
+  --name discord-llm-bot \
+  -p 5000:5000 \
+  -p 5050:5050 \
+  -v $(pwd)/data:/app/data \
+  your-image-name
+```
+
+Then visit `http://localhost:5050/setup` to configure.
+
+**Optional Environment Variables:**
+You can still pre-configure using environment variables (they will auto-populate in the setup wizard):
+- `BOT_TOKEN` - Your Discord bot token
+- `OPENAI_API_KEY` - OpenAI API key
+- `GEMINI_API_KEY` - Google Gemini API key
+- `ANTHROPIC_API_KEY` - Anthropic/Claude API key
+- `OPENROUTER_API_KEY` - OpenRouter API key
+- `LMSTUDIO_BASE_URL` - LM Studio endpoint
+- `CUSTOM_LLM_BASE_URL` - Custom OpenAI-compatible endpoint
+- `CUSTOM_LLM_API_KEY` - API key for custom endpoint
+
+**For Unraid users:**
+- Map `/mnt/user/appdata/openllm` to `/app/data` for persistence
+- Expose ports 5000 (dashboard) and 5050 (setup wizard)
+- On first start, access setup wizard at `http://<unraid-ip>:5050/setup`
+- After setup, access dashboard at `http://<unraid-ip>:5000`
+
 ## 📖 Configuration
 
 ### Web Setup Wizard

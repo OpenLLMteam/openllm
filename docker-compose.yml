@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  discord-bot:
+    build: .
+    container_name: discord-llm-bot
+    restart: unless-stopped
+    
+    # Environment variables - FILL THESE IN OR USE .env FILE
+    environment:
+      # Required: Discord bot token
+      - BOT_TOKEN=${BOT_TOKEN}
+      
+      # LLM Provider API Keys (set at least one)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      
+      # Optional: LM Studio (if running locally)
+      - LMSTUDIO_BASE_URL=${LMSTUDIO_BASE_URL:-http://host.docker.internal:1234/v1}
+      
+      # Optional: Custom endpoint
+      - CUSTOM_LLM_BASE_URL=${CUSTOM_LLM_BASE_URL:-}
+      - CUSTOM_LLM_API_KEY=${CUSTOM_LLM_API_KEY:-}
+    
+    # Port mapping for dashboard
+    ports:
+      - "5000:5000"    # Dashboard
+      - "5050:5050"    # Setup wizard (first run only)
+    
+    # Volume mounts for persistence
+    volumes:
+      # Persist database and configuration
+      - ./data:/app/data
+      
+      # Optional: mount .env if you prefer file-based config
+      # - ./.env:/app/.env
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Network mode (use host if you need to access services on host machine)
+    # network_mode: "host"  # Uncomment for host network mode
+    
+    # Optional: GPU support for local models
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
