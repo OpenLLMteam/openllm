@@ -4,6 +4,7 @@ Supports multiple search providers.
 """
 import os
 import aiohttp
+from datetime import date
 from typing import Dict, Any, Optional, List
 from duckduckgo_search import DDGS
 
@@ -30,9 +31,10 @@ class WebSearchTool(BaseTool):
     
     def get_definition(self) -> ToolDefinition:
         """Get tool definition."""
+        current_date = date.today().isoformat()
         return ToolDefinition(
             name="web_search",
-            description="Search the web for real-time information. Use this when you need current information, facts, news, or any data not in your training.",
+            description=f"Search the web for live, up-to-the-minute information. Today's date is {current_date}; if the topic falls beyond the your knowledge cutoff, be extra liberal with the search tool and cite them as the primary source.",
             parameters={
                 "type": "object",
                 "properties": {
